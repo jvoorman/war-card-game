@@ -138,7 +138,6 @@ def draw_all_cards_from_p_win_pile(deck, player, win_pile_count):
 def transfer_cards_from_p_win_to_p_pile(deck, player, win_pile_count):
     # Take every card in player_win_pile and put it into player_pile
     cards_to_transfer = draw_all_cards_from_p_win_pile(deck, player, win_pile_count)
-    print(cards_to_transfer)
     # put those cards into player_pile
     requests.get(
             ('https://deckofcardsapi.com/api/deck/{deck_id}/pile/{pile}/add/?cards={player_card_codes}').format(
@@ -156,6 +155,98 @@ def transfer_cards_from_p_win_to_p_pile(deck, player, win_pile_count):
             )
 
 # called
+def war_cleanup_function(deck, player_list):
+    # war cleanup func repopulates proper piles for players still in the game
+    # also returns list of players to remove
+    # uses draw and transfer funcs to accomplish cleanup
+    players_to_remove = []
+    r = requests.get(
+            ('https://deckofcardsapi.com/api/deck/{deck_id}/pile/{pile}/list/').format(
+                deck_id = game_deck.deck_id,
+                pile = ('{player}_pile').format(player = player_list[0])
+                )
+            )
+    r_dict = r.json()
+    piles = r_dict['piles']
+    for player in player_list:
+        remaining = piles[('{player}_pile').format(player = player)]['remaining']
+        print(('Remaining for {0}: {1}').format(player, remaining))
+        try:
+            win_pile_count = piles[('{player}_win_pile').format(player = player)]['remaining']
+        except:
+            win_pile_count = 0
+        if remaining + win_pile_count < 2:
+            print(("{player} does not have enough cards left! {player} is out of the game.").format(player = player))
+            if win_pile_count > 0:
+                transfer_cards_from_p_win_to_p_pile(game_deck, player, win_pile_count)
+            players_to_remove.append(player)
+        elif remaining < 2:
+            transfer_cards_from_p_win_to_p_pile(game_deck, player, win_pile_count)
+            print(("Cards transfered for {0}").format(player))
+    return players_to_remove
+
+def alter_player_list(players_to_remove):
+    for player in players_to_remove:
+        player_list.remove(player)
+
+# called
+def recursive_get_final_winner_and_pot(deck, result_dict):
+    """ Takes in the result_dict from draw_cards_from_all_p_and_compare and continues to 
+        call the function until there's one winner in the max_value_player_list and 
+        the card pot is a cumulative of all the winnings
+    """
+    max_value_player_list = result_dict["max_value_player_list"]
+    card_pot = result_dict["card_pot"]
+
+    if len(max_value_player_list) > 1:
+        if len(max_value_player_list) == 2:
+            winners = " and ".join(max_value_player_list)
+        else:
+            winners = ", ".join(max_value_player_list)
+        print(("There's a {tie_len}-way tie between {winners}!").format(
+            tie_len = len(max_value_player_list), 
+            winners = winners
+            )
+        )
+        print("This means War!")
+
+        players_to_remove = war_cleanup_function(deck, max_value_player_list)
+        if len(players_to_remove) > 0:
+            for player in players_to_remove:
+                card = get_p_draw_card(deck, player)
+                result_dict["card_pot"] += card
+                result_dict["max_value_player_list"].remove(player)
+        alter_player_list(players_to_remove)
+
+        if len(max_value_player_list) > 1:
+            for player in max_value_player_list:
+                card_pot += get_p_draw_card(deck, player)
+            new_result_dict = draw_cards_from_all_p_and_compare(deck, max_value_player_list)
+            new_result_dict["card_pot"] += card_pot
+        else:
+            return result_dict
+
+        if len(new_result_dict["max_value_player_list"]) > 1:
+            return recursive_get_final_winner_and_pot(deck, new_result_dict)
+        else:
+            return new_result_dict
+    else:
+        return result_dict
+
+# called
+def cards_to_player_win_pile(deck, winner, cards_won):
+    # takes dict card list and formats it to be added to pile as string
+    cards_won_codes = ","
+    cards_won_codes = cards_won_codes.join(cards_won)
+    # adding formatted cards to player_win_pile
+    requests.get(
+            ('https://deckofcardsapi.com/api/deck/{deck_id}/pile/{pile}/add/?cards={player_card_codes}').format(
+                deck_id = deck.deck_id,
+                pile = ('{player}_win_pile').format(player = winner),
+                player_card_codes = cards_won_codes
+                )
+            )
+
 def eot_cleanup_function(deck, player_list):
     # end of turn func repopulates proper piles for players still in the game
     # also returns list of players to remove
@@ -188,57 +279,6 @@ def eot_cleanup_function(deck, player_list):
                 players_to_remove.append(player)
     return players_to_remove
 
-def alter_player_list(players_to_remove):
-    for player in players_to_remove:
-        player_list.remove(player)
-
-# called
-def recursive_get_final_winner_and_pot(deck, result_dict):
-    """ Takes in the result_dict from draw_cards_from_all_p_and_compare and continues to 
-        call the function until there's one winner in the max_value_player_list and 
-        the card pot is a cumulative of all the winnings
-    """
-    max_value_player_list = result_dict["max_value_player_list"]
-    card_pot = result_dict["card_pot"]
-
-    if len(max_value_player_list) > 1:
-        if len(max_value_player_list) == 2:
-            winners = " and ".join(max_value_player_list)
-        else:
-            winners = ", ".join(max_value_player_list)
-        print(("There's a {tie_len}-way tie between {winners}!").format(
-            tie_len = len(max_value_player_list), 
-            winners = winners
-            )
-        )
-        print("This means those players need to take another turn.")
-        players_to_remove = eot_cleanup_function(deck, max_value_player_list)
-        alter_player_list(players_to_remove)
-
-        new_result_dict = draw_cards_from_all_p_and_compare(deck, max_value_player_list)
-        new_result_dict["card_pot"] += card_pot
-        
-        if len(new_result_dict["max_value_player_list"]) > 1:
-            return recursive_get_final_winner_and_pot(deck, new_result_dict)
-        else:
-            return new_result_dict
-    else:
-        return result_dict
-
-# called
-def cards_to_player_win_pile(deck, winner, cards_won):
-    # takes dict card list and formats it to be added to pile as string
-    cards_won_codes = ","
-    cards_won_codes = cards_won_codes.join(cards_won)
-    # adding formatted cards to player_win_pile
-    requests.get(
-            ('https://deckofcardsapi.com/api/deck/{deck_id}/pile/{pile}/add/?cards={player_card_codes}').format(
-                deck_id = deck.deck_id,
-                pile = ('{player}_win_pile').format(player = winner),
-                player_card_codes = cards_won_codes
-                )
-            )
-
 # calls all of the above labeled functions
 def take_a_turn(game_deck, player_list):
     print(("Turn starting player list: {0}").format(player_list))
@@ -254,7 +294,8 @@ def take_a_turn(game_deck, player_list):
     print(("{winner} won all of the cards!").format(winner = winner))
 
     players_to_remove = eot_cleanup_function(game_deck, player_list)
-    alter_player_list(players_to_remove)
+    if len(players_to_remove) > 0:
+        alter_player_list(players_to_remove)
 
 
 
@@ -262,6 +303,12 @@ init_game(game_deck, player_list)
 
 count = 1
 while len(player_list) > 1:
+    r = requests.get(
+            ('https://deckofcardsapi.com/api/deck/{deck_id}/pile/{pile}/list/').format(
+                deck_id = game_deck.deck_id,
+                pile = ('{player}_win_pile').format(player = 'jenna')
+                )
+            )
     take_a_turn(game_deck, player_list)
     print('Turn completed: ' + str(count))
     count += 1
@@ -270,10 +317,5 @@ else:
 
 
 
-r = requests.get(
-            ('https://deckofcardsapi.com/api/deck/{deck_id}/pile/{pile}/list/').format(
-                deck_id = game_deck.deck_id,
-                pile = ('{player}_win_pile').format(player = 'jenna')
-                )
-            )
+
 # print(r.text)

@@ -260,9 +260,13 @@ def take_a_turn(game_deck, player_list):
 
 init_game(game_deck, player_list)
 
-for i in range(26):
+count = 1
+while len(player_list) > 1:
     take_a_turn(game_deck, player_list)
-    print('Turn completed: ' + str(i))
+    print('Turn completed: ' + str(count))
+    count += 1
+else:
+    print(("Congrats {player}! You've won the game!").format(player = player_list[0]))
 
 
 
@@ -272,4 +276,4 @@ r = requests.get(
                 pile = ('{player}_win_pile').format(player = 'jenna')
                 )
             )
-print(r.text)
+# print(r.text)

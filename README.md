@@ -19,3 +19,11 @@ The game ends when one player has won all the cards.
 
 ## How to Use the App
 Lol TBD
+
+## Running tests
+
+```
+pipenv install --dev
+pipenv shell
+pytest
+```

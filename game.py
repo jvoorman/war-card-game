@@ -7,11 +7,15 @@ class Deck(object):
     """This is the deck that we're gonna use for our card game"""
     # TBH you could probably replace this with simply a deck_id
     def __init__(self):
+        deck = self.get_shuffled_deck()
+        self.deck_id = deck['deck_id']
+        self.shuffled = deck['shuffled']
+        self.remaining = deck['remaining']
+
+
+    def get_shuffled_deck(self):
         r = requests.get('https://deckofcardsapi.com/api/deck/new/shuffle/')
-        r_dict = r.json()
-        self.deck_id = r_dict['deck_id']
-        self.shuffled = r_dict['shuffled']
-        self.remaining = r_dict['remaining']
+        return r.json()
 
 
 # Start up the game
@@ -48,6 +52,7 @@ def add_cards_to_player_draw_pile(deck, player, cards):
                 player_card_codes = player_card_codes
                 )
             )
+
 
 def init_game(deck, player_list):
     # create a card pile for each player to draw from
@@ -103,7 +108,7 @@ def compare_cards(cards_list, player_list):
 # called
 def draw_cards_from_all_p_and_compare(deck, player_list):
     """ Takes in a deck and player_list, draws a card from each card and compares them
-        to determine the highest value card. Returns a dict that contains a list of players 
+        to determine the highest value card. Returns a dict that contains a list of players
         with the highest card values, as well as the pot of cards they won
     """
     cards_to_compare = []
@@ -191,8 +196,8 @@ def alter_player_list(players_to_remove):
 
 # called
 def recursive_get_final_winner_and_pot(deck, result_dict):
-    """ Takes in the result_dict from draw_cards_from_all_p_and_compare and continues to 
-        call the function until there's one winner in the max_value_player_list and 
+    """ Takes in the result_dict from draw_cards_from_all_p_and_compare and continues to
+        call the function until there's one winner in the max_value_player_list and
         the card pot is a cumulative of all the winnings
     """
     max_value_player_list = result_dict["max_value_player_list"]
@@ -204,7 +209,7 @@ def recursive_get_final_winner_and_pot(deck, result_dict):
         else:
             winners = ", ".join(max_value_player_list)
         print(("There's a {tie_len}-way tie between {winners}!").format(
-            tie_len = len(max_value_player_list), 
+            tie_len = len(max_value_player_list),
             winners = winners
             )
         )
@@ -266,7 +271,7 @@ def eot_cleanup_function(deck, player_list):
         print(('Remaining for {0}: {1}').format(player, remaining))
         # if it's empty, transfer to player_pile
         if remaining == 0:
-            try: 
+            try:
                 win_pile_count = piles[('{player}_win_pile').format(player = player)]['remaining']
                 if win_pile_count == 0:
                     print(("{player} has no cards left! {player} is out of the game.").format(player = player))
@@ -282,11 +287,11 @@ def eot_cleanup_function(deck, player_list):
 # calls all of the above labeled functions
 def take_a_turn(game_deck, player_list):
     print(("Turn starting player list: {0}").format(player_list))
-    
+
     d = draw_cards_from_all_p_and_compare(game_deck, player_list)
-    
+
     final = recursive_get_final_winner_and_pot(game_deck, d)
-    
+
     winner = final["max_value_player_list"][0]
     card_pot = final["card_pot"]
 
@@ -297,25 +302,24 @@ def take_a_turn(game_deck, player_list):
     if len(players_to_remove) > 0:
         alter_player_list(players_to_remove)
 
+def main():
+    init_game(game_deck, player_list)
 
-
-init_game(game_deck, player_list)
-
-count = 1
-while len(player_list) > 1:
-    r = requests.get(
-            ('https://deckofcardsapi.com/api/deck/{deck_id}/pile/{pile}/list/').format(
-                deck_id = game_deck.deck_id,
-                pile = ('{player}_win_pile').format(player = 'jenna')
+    count = 1
+    while len(player_list) > 1:
+        r = requests.get(
+                ('https://deckofcardsapi.com/api/deck/{deck_id}/pile/{pile}/list/').format(
+                    deck_id = game_deck.deck_id,
+                    pile = ('{player}_win_pile').format(player = 'jenna')
+                    )
                 )
-            )
-    take_a_turn(game_deck, player_list)
-    print('Turn completed: ' + str(count))
-    count += 1
-else:
-    print(("Congrats {player}! You've won the game!").format(player = player_list[0]))
+        take_a_turn(game_deck, player_list)
+        print('Turn completed: ' + str(count))
+        count += 1
+    else:
+        print(("Congrats {player}! You've won the game!").format(player = player_list[0]))
 
+    # print(r.text)
 
-
-
-# print(r.text)
+if __name__ == "__main__":
+    main()

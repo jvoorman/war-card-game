@@ -1,6 +1,6 @@
-# import game
+import game
 import json
-from unittest import mock
+import pytest
 from unittest.mock import MagicMock
 import requests
 
@@ -1465,6 +1465,13 @@ player3_pile = json.loads(
 }
 """
 )
+
+def test_shuffle_deck():
+    game.Deck.get_shuffled_deck = MagicMock(return_value=mock_deck)
+
+    deck = game.Deck.get_shuffled_deck()
+
+    assert len(deck["cards"]) == 52, "Deck contains 52 cards"
 
 ## Code to generate mocks
 

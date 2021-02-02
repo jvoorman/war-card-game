@@ -85,16 +85,9 @@ def compare_cards(cards_list, player_list):
     ind_list = []
     for i in range(len(cards_list)):
         card_str = cards_list[i][:-1]
-        if card_str == 'A':
-            card_val = 14
-        elif card_str == 'K':
-            card_val = 13
-        elif card_str == 'Q':
-            card_val = 12
-        elif card_str == 'J':
-            card_val = 11
-        elif card_str == '0':
-            card_val = 10
+        card_dict = {'A': 14, 'K': 13, 'Q': 12, 'J': 11, '0': 10}
+        if card_str in card_dict:
+            card_val = card_dict[card_str]
         else:
             card_val = int(card_str)
         if card_val > max_card_val:

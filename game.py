@@ -70,7 +70,7 @@ class CardPile(object):
         card_codes_list = [card['code'] for card in cards]
         return card_codes_list
 
-       
+
 def add_cards_to_player_draw_pile(deck, player, cards):
     # creates a card for a player from a deck and a player name string
     # draw proper number of cards from the deck for one player
@@ -104,7 +104,7 @@ def get_p_draw_card(deck, player):
     r = requests.get(
             ('https://deckofcardsapi.com/api/deck/{deck_id}/pile/{pile}/draw/?count=1').format(
                 deck_id = deck.deck_id,
-                pile = ('{player}_pile').format(player = player)
+                pile = ('{player}_draw').format(player = player)
                 )
             )
     r_dict = r.json()
@@ -331,22 +331,25 @@ def take_a_turn(game_deck, player_list):
 
 
 def init_game(deck, player_list):
-    # create a card pile for each player to draw from
-    # deals out even numbers to each player and then deals the rest of the deck
+    # deals out all the cards in the deck to player's draw piles
     initial_deal_card_num = int(52 / len(player_list))
     extra_cards_to_deal = 52 % len(player_list)
     pile_dict = {}
     for player in player_list:
-        pile_dict[('{player}_draw_pile').format(player = player)] = CardPile(deck.deck_id, ('{player}_draw_pile').format(player = player), deck.draw_from_deck(initial_deal_card_num))
-    for i in range(extra_cards_to_deal):
-        add_cards_to_player_draw_pile(deck, player_list[i], 1)
+        extra_cards = 0
+        if extra_cards_to_deal > 0:
+            extra_cards = 1
+            extra_cards_to_deal -= 1
+        pile_name = ('{player}_draw').format(player = player)
+        cards_to_add = deck.draw_from_deck(initial_deal_card_num + extra_cards)
+        pile_dict[pile_name] = CardPile(deck.deck_id, pile_name, cards_to_add)
     print('++++Game successfully initiated++++')
-    return 
+    return pile_dict
 
 def main():
     game_deck = Deck()
     player_list = ['jenna', 'eddie', 'cp1', 'cp2', 'cp3', 'cp4']
-    init_game(game_deck, player_list)
+    pile_dict = init_game(game_deck, player_list)
 
     count = 1
     while len(player_list) > 1:

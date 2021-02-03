@@ -1509,6 +1509,7 @@ def test_CardPile_add_to_pile_func():
     assert pile.remaining == 5 + 2
     assert len(pile.get_card_codes_list()) == 5 + 2
     assert ",".join(pile.get_card_codes_list()) == cards + ',' + cards_to_add
+    assert deck.remaining == 52 - 7
 
 
 def test_CardPile_get_card_codes_func():
@@ -1519,8 +1520,20 @@ def test_CardPile_get_card_codes_func():
     for card in card_codes:
         assert re.match(r"[AKQJ0-9][HSCD]", card)
     assert len(card_codes) == 5
-    
 
+def test_init_game_func():
+    deck = game.Deck()
+    player_list = ['jenna', 'eddie', 'cp1', 'cp2', 'cp3', 'cp4']
+    pile_dict = game.init_game(deck, player_list)
+    total_card_num = 0
+    assert deck.remaining == 0
+    for player in player_list:
+        pile_name = ('{player}_draw').format(player = player)
+        player_pile = pile_dict[pile_name]
+        assert player_pile.name == pile_name
+        assert player_pile.remaining in (8, 9)
+        total_card_num += player_pile.remaining
+    assert total_card_num == 52
 
 
 

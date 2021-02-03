@@ -3,6 +3,7 @@ import json
 import pytest
 from unittest.mock import MagicMock
 import requests
+import dev_space
 
 mock_deck = json.loads(
 """
@@ -1473,6 +1474,15 @@ def test_shuffle_deck():
 
     assert len(deck["cards"]) == 52, "Deck contains 52 cards"
 
+def test_draw_from_deck():
+    dev_space.Deck.get_shuffled_deck = MagicMock(return_value=mock_deck)
+    deck = dev_space.Deck.get_shuffled_deck()
+
+    cards = deck.draw_from_deck(3)
+    assert cards == '0C,2H,KH'
+    print(cards)
+
+test_draw_from_deck()
 ## Code to generate mocks
 
 # for i, card in enumerate(mock_deck["cards"]):

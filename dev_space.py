@@ -33,28 +33,27 @@ class Deck(object):
 
 deck = Deck()
 deck_id = deck.deck_id
-
+print(deck.draw_from_deck(3))
 
 class CardPile(object):
     """A pile of cards that we can use for various things"""
     def __init__(self, deck_id, pile_name, cards_to_add):
-        pile = self.create_new_pile(cards_to_add)
+        pile = self.create_new_pile(deck_id, pile_name, cards_to_add)
         self.deck_id = deck_id
         self.name = pile_name
         self.remaining = pile['remaining']
-        self.card_codes = self.card_codes_list()
 
-    def create_new_pile(self, cards_to_add):
+    def create_new_pile(self, deck_id, pile_name, cards_to_add):
         r = requests.get(
             ('https://deckofcardsapi.com/api/deck/{deck_id}/pile/{pile}/add/?cards={cards_to_add}').format(
-                deck_id = self.deck_id,
-                pile = ('{player}_pile').format(player = self.name),
+                deck_id = deck_id,
+                pile = ('{player}_pile').format(player = pile_name),
                 cards_to_add = cards_to_add
                 )
             )
         return r.json()
     
-    def card_codes_list(self):
+    def get_card_codes_list(self):
         r = requests.get(
             ('https://deckofcardsapi.com/api/deck/{deck_id}/pile/{pile}/list/').format(
                 deck_id = self.deck_id,
@@ -68,5 +67,5 @@ class CardPile(object):
         return card_codes_list
 
          
-jenna_pile = CardPile(deck_id, 'jenna', deck.draw_from_deck())
+jenna_pile = CardPile(deck_id, 'jenna', deck.draw_from_deck(1))
 

@@ -5,9 +5,9 @@ import requests
 
 class Deck(object):
     """This is the deck that we're gonna use for our card game"""
-    # TBH you could probably replace this with simply a deck_id
     def __init__(self):
         deck = self.get_shuffled_deck()
+        self.deck = deck
         self.deck_id = deck['deck_id']
         self.shuffled = deck['shuffled']
         self.remaining = deck['remaining']
@@ -25,47 +25,52 @@ class Deck(object):
                 )
             )
         cards = r.json()['cards']
-        card_codes_list = []
-        for i in range(len(cards)):
-            card_codes_list.append(cards[i]['code'])
+        card_codes_list = [card['code'] for card in cards]
         card_codes_str = ",".join(card_codes_list)
+        self.remaining -= num_cards
         return card_codes_str
-
 
 class CardPile(object):
     """A pile of cards that we can use for various things"""
     def __init__(self, deck_id, pile_name, cards_to_add):
-        pile = self.add_to_pile(deck_id, pile_name, cards_to_add)
+        pile = self.create_pile(deck_id, pile_name, cards_to_add)
+        self.pile = pile
         self.deck_id = deck_id
         self.name = pile_name
         self.remaining = pile['piles'][('{0}').format(self.name)]['remaining']
 
-    def add_to_pile(self, deck_id, pile_name, cards_to_add):
+    def create_pile(self, deck_id, pile_name, cards_to_add):
         r = requests.get(
             ('https://deckofcardsapi.com/api/deck/{deck_id}/pile/{pile}/add/?cards={cards_to_add}').format(
                 deck_id = deck_id,
-                pile = ('{player}').format(player = pile_name),
+                pile = pile_name,
                 cards_to_add = cards_to_add
                 )
             )
         return r.json()
+
+    def add_to_pile(self, cards_to_add):
+        r = requests.get(
+            ('https://deckofcardsapi.com/api/deck/{deck_id}/pile/{pile}/add/?cards={cards_to_add}').format(
+                deck_id = self.deck_id,
+                pile = self.name,
+                cards_to_add = cards_to_add
+                )
+            )
+        self.remaining = r.json()['piles'][('{0}').format(self.name)]['remaining']        
     
     def get_card_codes_list(self):
         r = requests.get(
             ('https://deckofcardsapi.com/api/deck/{deck_id}/pile/{pile}/list/').format(
                 deck_id = self.deck_id,
-                pile = ('{player}').format(player = self.name)
+                pile = self.name
                 )
             )
         cards = r.json()['piles'][('{0}').format(self.name)]['cards']
-        card_codes_list = []
-        for i in range(len(cards)):
-            card_codes_list.append(cards[i]['code'])
+        card_codes_list = [card['code'] for card in cards]
         return card_codes_list
 
-
-
-
+       
 def add_cards_to_player_draw_pile(deck, player, cards):
     # creates a card for a player from a deck and a player name string
     # draw proper number of cards from the deck for one player

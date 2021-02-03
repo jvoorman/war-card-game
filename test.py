@@ -1469,28 +1469,65 @@ player3_pile = json.loads(
 """
 )
 
-def test_deck_class():
-    test_deck = dev_space.Deck()
-    assert all(key in ('deck_id', 'success', 'remaining', 'shuffled') for key in test_deck.deck.keys())
-    assert test_deck.deck_id.isalnum() and len(test_deck.deck_id) == 12
-    assert test_deck.shuffled == True
-    assert test_deck.remaining == 52
+def test_Deck_class():
+    deck = game.Deck()
+
+    assert all(key in ('deck_id', 'success', 'remaining', 'shuffled') for key in deck.deck.keys())
+    assert deck.deck_id.isalnum() and len(deck.deck_id) == 12
+    assert deck.shuffled == True
+    assert deck.remaining == 52
 
     
-def test_draw_from_deck():
-    test_deck = dev_space.Deck()
-    
+def test_Deck_draw_from_deck_func():
+    deck = game.Deck()
     num_cards = 50
-    drawn_cards = test_deck.draw_from_deck(num_cards)
+    drawn_cards = deck.draw_from_deck(num_cards)
+
     assert re.search(r"\s", drawn_cards) == None
     assert len(re.findall(r",", drawn_cards)) == num_cards - 1
     assert len(re.findall(r"[AKQJ0-9][HSCD]+", drawn_cards)) == num_cards
-    assert test_deck.remaining == 52 - num_cards
+    assert deck.remaining == 52 - num_cards
+
+def test_CardPile_class():
+    deck = game.Deck()
+    cards = deck.draw_from_deck(5)
+    pile = game.CardPile(deck.deck_id, 'my_pile', cards)
+
+    assert all(key in ('deck_id', 'success', 'remaining', 'piles') for key in pile.pile.keys())
+    assert pile.deck_id == deck.deck_id
+    assert pile.name == 'my_pile'
+    assert pile.remaining == 5
+    assert ",".join(pile.get_card_codes_list()) == cards
+
+def test_CardPile_add_to_pile_func():
+    deck = game.Deck()
+    cards = deck.draw_from_deck(5)
+    pile = game.CardPile(deck.deck_id, 'my_pile', cards)
+    cards_to_add = deck.draw_from_deck(2)
+    pile.add_to_pile(cards_to_add)
+
+    assert pile.remaining == 5 + 2
+    assert len(pile.get_card_codes_list()) == 5 + 2
+    assert ",".join(pile.get_card_codes_list()) == cards + ',' + cards_to_add
+
+
+def test_CardPile_get_card_codes_func():
+    deck = game.Deck()
+    pile = game.CardPile(deck.deck_id, 'my_pile', deck.draw_from_deck(5))
+    card_codes = pile.get_card_codes_list()
+
+    for card in card_codes:
+        assert re.match(r"[AKQJ0-9][HSCD]", card)
+    assert len(card_codes) == 5
+    
 
 
 
 
 
+
+
+"""
 def test_shuffle_deck_mock():
     game.Deck.get_shuffled_deck = MagicMock(return_value=mock_deck)
 
@@ -1501,8 +1538,8 @@ def test_shuffle_deck_mock():
 def test_draw_from_deck_mock():
     
 
-    dev_space.Deck.get_shuffled_deck = MagicMock(return_value=mock_deck)
-    deckClass = dev_space.Deck()
+    game.Deck.get_shuffled_deck = MagicMock(return_value=mock_deck)
+    deckClass = game.Deck()
 
     # deckClass.get_shuffled_deck()
 
@@ -1510,7 +1547,7 @@ def test_draw_from_deck_mock():
     cards = deckClass.deck["cards"][:3]
     card_codes = [card['code'] for card in cards]
     assert ",".join(card_codes) == '0C,2H,KH'
-
+"""
 
 
 ## Code to generate mocks

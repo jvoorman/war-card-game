@@ -26,10 +26,9 @@ class Deck(object):
                 )
             )
         cards = r.json()['cards']
-        card_codes_list = []
-        for i in range(len(cards)):
-            card_codes_list.append(cards[i]['code'])
+        card_codes_list = [card['code'] for card in cards]
         card_codes_str = ",".join(card_codes_list)
+        self.remaining -= num_cards
         return card_codes_str
 
 
@@ -98,10 +97,10 @@ def init_game(deck, player_list):
     return pile_dict
 
 
-pile_dict = init_game(deck, player_list)
+# pile_dict = init_game(deck, player_list)
 
-print(pile_dict)
-print(pile_dict['jenna_draw_pile'].remaining)
+# print(pile_dict)
+# print(pile_dict['jenna_draw_pile'].remaining)
 # init not working properly yet
 
 

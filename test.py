@@ -1,6 +1,7 @@
 import game
 import json
 import pytest
+import re
 from unittest.mock import MagicMock
 import requests
 import dev_space
@@ -1468,14 +1469,36 @@ player3_pile = json.loads(
 """
 )
 
-def test_shuffle_deck():
+def test_deck_class():
+    test_deck = dev_space.Deck()
+    assert all(key in ('deck_id', 'success', 'remaining', 'shuffled') for key in test_deck.deck.keys())
+    assert test_deck.deck_id.isalnum() and len(test_deck.deck_id) == 12
+    assert test_deck.shuffled == True
+    assert test_deck.remaining == 52
+
+    
+def test_draw_from_deck():
+    test_deck = dev_space.Deck()
+    
+    num_cards = 50
+    drawn_cards = test_deck.draw_from_deck(num_cards)
+    assert re.search(r"\s", drawn_cards) == None
+    assert len(re.findall(r",", drawn_cards)) == num_cards - 1
+    assert len(re.findall(r"[AKQJ0-9][HSCD]+", drawn_cards)) == num_cards
+    assert test_deck.remaining == 52 - num_cards
+
+
+
+
+
+def test_shuffle_deck_mock():
     game.Deck.get_shuffled_deck = MagicMock(return_value=mock_deck)
 
     deck = game.Deck.get_shuffled_deck()
 
     assert len(deck["cards"]) == 52, "Deck contains 52 cards"
 
-def test_draw_from_deck():
+def test_draw_from_deck_mock():
     
 
     dev_space.Deck.get_shuffled_deck = MagicMock(return_value=mock_deck)
@@ -1487,9 +1510,9 @@ def test_draw_from_deck():
     cards = deckClass.deck["cards"][:3]
     card_codes = [card['code'] for card in cards]
     assert ",".join(card_codes) == '0C,2H,KH'
-    print(cards)
 
-# test_draw_from_deck()
+
+
 ## Code to generate mocks
 
 # for i, card in enumerate(mock_deck["cards"]):

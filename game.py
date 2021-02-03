@@ -35,12 +35,12 @@ class Deck(object):
 class CardPile(object):
     """A pile of cards that we can use for various things"""
     def __init__(self, deck_id, pile_name, cards_to_add):
-        pile = self.create_new_pile(deck_id, pile_name, cards_to_add)
+        pile = self.add_to_pile(deck_id, pile_name, cards_to_add)
         self.deck_id = deck_id
         self.name = pile_name
         self.remaining = pile['piles'][('{0}').format(self.name)]['remaining']
 
-    def create_new_pile(self, deck_id, pile_name, cards_to_add):
+    def add_to_pile(self, deck_id, pile_name, cards_to_add):
         r = requests.get(
             ('https://deckofcardsapi.com/api/deck/{deck_id}/pile/{pile}/add/?cards={cards_to_add}').format(
                 deck_id = deck_id,
@@ -64,11 +64,6 @@ class CardPile(object):
         return card_codes_list
 
 
-# Start up the game
-    # ask for num players
-    # get names for all players and assign them to player values
-game_deck = Deck()
-player_list = ['jenna', 'eddie', 'cp1', 'cp2', 'cp3', 'cp4']
 
 
 def add_cards_to_player_draw_pile(deck, player, cards):
@@ -98,18 +93,6 @@ def add_cards_to_player_draw_pile(deck, player, cards):
                 player_card_codes = player_card_codes
                 )
             )
-
-
-def init_game(deck, player_list):
-    # create a card pile for each player to draw from
-    # deals out even numbers to each player and then deals the rest of the deck
-    initial_deal_card_num = int(52 / len(player_list))
-    extra_cards = 52 % len(player_list)
-    for player in player_list:
-        add_cards_to_player_draw_pile(deck, player, initial_deal_card_num)
-    for i in range(extra_cards):
-        add_cards_to_player_draw_pile(deck, player_list[i], 1)
-    print('++++Game successfully initiated++++')
 
 
 def get_p_draw_card(deck, player):
@@ -341,7 +324,23 @@ def take_a_turn(game_deck, player_list):
     if len(players_to_remove) > 0:
         alter_player_list(players_to_remove)
 
+
+def init_game(deck, player_list):
+    # create a card pile for each player to draw from
+    # deals out even numbers to each player and then deals the rest of the deck
+    initial_deal_card_num = int(52 / len(player_list))
+    extra_cards_to_deal = 52 % len(player_list)
+    pile_dict = {}
+    for player in player_list:
+        pile_dict[('{player}_draw_pile').format(player = player)] = CardPile(deck.deck_id, ('{player}_draw_pile').format(player = player), deck.draw_from_deck(initial_deal_card_num))
+    for i in range(extra_cards_to_deal):
+        add_cards_to_player_draw_pile(deck, player_list[i], 1)
+    print('++++Game successfully initiated++++')
+    return 
+
 def main():
+    game_deck = Deck()
+    player_list = ['jenna', 'eddie', 'cp1', 'cp2', 'cp3', 'cp4']
     init_game(game_deck, player_list)
 
     count = 1

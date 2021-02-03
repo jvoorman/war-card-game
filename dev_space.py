@@ -7,6 +7,7 @@ class Deck(object):
     # TBH you could probably replace this with simply a deck_id
     def __init__(self):
         deck = self.get_shuffled_deck()
+        self.deck = deck
         self.deck_id = deck['deck_id']
         self.shuffled = deck['shuffled']
         self.remaining = deck['remaining']

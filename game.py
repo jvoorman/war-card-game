@@ -70,7 +70,20 @@ class CardPile(object):
         card_codes_list = [card['code'] for card in cards]
         return card_codes_list
 
+    def draw_cards_from_top_of_pile(self, num_cards):
+        r = requests.get(
+            ('https://deckofcardsapi.com/api/deck/{deck_id}/pile/{pile}/draw/?count={num_cards}').format(
+                deck_id = self.deck_id,
+                pile = self.name,
+                num_cards = str(num_cards)
+                )
+            )
+        cards = r.json()['cards']
+        card_codes_list = [card['code'] for card in cards]
+        card_codes_str = ",".join(card_codes_list)
+        return card_codes_str
 
+'''
 def add_cards_to_player_draw_pile(deck, player, cards):
     # creates a card for a player from a deck and a player name string
     # draw proper number of cards from the deck for one player
@@ -98,7 +111,7 @@ def add_cards_to_player_draw_pile(deck, player, cards):
                 player_card_codes = player_card_codes
                 )
             )
-
+'''
 
 def get_p_draw_card(deck, player):
     r = requests.get(

@@ -1521,6 +1521,15 @@ def test_CardPile_get_card_codes_func():
         assert re.match(r"[AKQJ0-9][HSCD]", card)
     assert len(card_codes) == 5
 
+def test_CardPile_draw_cards_from_top_of_pile():
+    deck = game.Deck()
+    cards = deck.draw_from_deck(5)
+    pile = game.CardPile(deck.deck_id, 'my_pile', cards)
+    drawn_cards = pile.draw_cards_from_top_of_pile(2)
+
+    assert cards[-5:] == drawn_cards
+
+
 def test_init_game_func():
     deck = game.Deck()
     player_list = ['jenna', 'eddie', 'cp1', 'cp2', 'cp3', 'cp4']

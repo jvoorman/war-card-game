@@ -2,6 +2,7 @@
 # Takes Deck of Cards API and uses it to play simple card game
 
 import requests
+import re
 
 class Deck(object):
     """This is the deck that we're gonna use for our card game"""
@@ -19,10 +20,7 @@ class Deck(object):
     def draw_from_deck(self, num_cards):
         # returns card codes formatted to add to pile
         r = requests.get(
-            ('https://deckofcardsapi.com/api/deck/{deck_id}/draw/?count={num_cards}').format(
-                deck_id = self.deck_id,
-                num_cards = str(num_cards)
-                )
+            (f'https://deckofcardsapi.com/api/deck/{self.deck_id}/draw/?count={str(num_cards)}')
             )
         cards = r.json()['cards']
         card_codes_list = [card['code'] for card in cards]
@@ -83,6 +81,36 @@ class CardPile(object):
         card_codes_str = ",".join(card_codes_list)
         return card_codes_str
 
+class PilePile(object):
+    """This is the dict of CardPiles that can perform game operations"""
+    def __init__(self, deck_id):
+        pile_dict = {}
+        self.pile_dict = pile_dict
+        self.deck_id = deck_id
+    
+    def add_pile(self, card_pile):
+        self.pile_dict[card_pile.name] = card_pile
+    
+    def get_draw_piles(self):
+        result_list = []
+        for pile in self.pile_dict.keys():
+            if re.search(r"draw", pile):
+                result_list.append(self.pile_dict.get(pile))
+        return result_list
+    
+    def get_win_piles(self):
+        result_list = []
+        for pile in self.pile_dict.keys():
+            if re.search(r"win", pile):
+                result_list.append(self.pile_dict.get(pile))
+        return result_list
+    
+    def get_pile(self, pile_name):
+        return self.pile_dict.get(pile_name)
+    
+    def pile_to_pile_transfer(self, pile1_name, pile2_name):
+        pass
+
 '''
 def add_cards_to_player_draw_pile(deck, player, cards):
     # creates a card for a player from a deck and a player name string
@@ -126,8 +154,8 @@ def get_p_draw_card(deck, player):
     return player_card_code
 
 def compare_cards(cards_list, player_list):
-    # compares all the players' cards and returns the index of max
-    # returns list of players who have max card val
+    # compares all the players' cards and returns
+    # a list of players who have max card val
     max_card_val = 0
     ind_list = []
     for i in range(len(cards_list)):
@@ -146,11 +174,13 @@ def compare_cards(cards_list, player_list):
     return result
 
 # called
-def draw_cards_from_all_p_and_compare(deck, player_list):
-    """ Takes in a deck and player_list, draws a card from each card and compares them
+def draw_cards_from_all_p_and_compare(pile_dict):
+    """ Takes in the pile_dict, draws a card from each card and compares them
         to determine the highest value card. Returns a dict that contains a list of players
         with the highest card values, as well as the pot of cards they won
     """
+    # Let's make another pile in the pile_dict called card_pot and then make
+    # a transfer_from_one_pile_to_another func for CardPiles
     cards_to_compare = []
     for player in player_list:
         cards_to_compare.append(get_p_draw_card(deck, player))
@@ -363,6 +393,7 @@ def main():
     game_deck = Deck()
     player_list = ['jenna', 'eddie', 'cp1', 'cp2', 'cp3', 'cp4']
     pile_dict = init_game(game_deck, player_list)
+    # create a dict called game_data, then feed it into functions with ** and it will unpack itself
 
     count = 1
     while len(player_list) > 1:

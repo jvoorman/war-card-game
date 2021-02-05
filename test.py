@@ -1529,6 +1529,19 @@ def test_CardPile_draw_cards_from_top_of_pile():
 
     assert cards[-5:] == drawn_cards
 
+def test_PilePile_class():
+    deck = game.Deck()
+    player_list = ['jenna', 'eddie', 'cp1', 'cp2', 'cp3']
+    pile_pile = game.PilePile(deck.deck_id)
+
+    for player in player_list:
+        pile_pile.add_pile(game.CardPile(deck.deck_id, ('{0}_draw').format(player), deck.draw_from_deck(4)))
+    
+    for player in player_list:
+        assert pile_pile.get_pile(('{0}_draw').format(player)).name == ('{0}_draw').format(player)
+        
+    assert len(pile_pile.get_draw_piles()) == len(player_list)
+
 
 def test_init_game_func():
     deck = game.Deck()
@@ -1546,6 +1559,13 @@ def test_init_game_func():
 
 
 
+
+# Cleanup things to do:
+    # Change all .format to f-strings
+    # Use type hinting
+    # document all functions
+    # packing and unpacking lists
+    # use list comprehensions
 
 
 

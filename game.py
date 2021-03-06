@@ -2,7 +2,6 @@
 # Takes Deck of Cards API and uses it to play simple card game
 
 import requests
-import re
 
 class Deck(object):
     """This is the deck that we're gonna use for our card game"""
@@ -20,7 +19,7 @@ class Deck(object):
     def draw_from_deck(self, num_cards):
         # returns card codes formatted to add to pile
         r = requests.get(
-            (f'https://deckofcardsapi.com/api/deck/{self.deck_id}/draw/?count={str(num_cards)}')
+            f'https://deckofcardsapi.com/api/deck/{self.deck_id}/draw/?count={str(num_cards)}'
             )
         cards = r.json()['cards']
         card_codes_list = [card['code'] for card in cards]
@@ -35,51 +34,42 @@ class CardPile(object):
         self.pile = pile
         self.deck_id = deck_id
         self.name = pile_name
-        self.remaining = pile['piles'][('{0}').format(self.name)]['remaining']
+        self.remaining = pile['piles'][f'{self.name}']['remaining']
 
     def create_pile(self, deck_id, pile_name, cards_to_add):
         r = requests.get(
-            ('https://deckofcardsapi.com/api/deck/{deck_id}/pile/{pile}/add/?cards={cards_to_add}').format(
-                deck_id = deck_id,
-                pile = pile_name,
-                cards_to_add = cards_to_add
-                )
+            f'https://deckofcardsapi.com/api/deck/{deck_id}/pile/{pile_name}/add/?cards={cards_to_add}'
             )
         return r.json()
 
     def add_to_pile(self, cards_to_add):
         r = requests.get(
-            ('https://deckofcardsapi.com/api/deck/{deck_id}/pile/{pile}/add/?cards={cards_to_add}').format(
-                deck_id = self.deck_id,
-                pile = self.name,
-                cards_to_add = cards_to_add
-                )
+            f'https://deckofcardsapi.com/api/deck/{self.deck_id}/pile/{self.name}/add/?cards={cards_to_add}'
             )
-        self.remaining = r.json()['piles'][('{0}').format(self.name)]['remaining']        
+        self.remaining = r.json()['piles'][f'{self.name}']['remaining']        
     
     def get_card_codes_list(self):
         r = requests.get(
-            ('https://deckofcardsapi.com/api/deck/{deck_id}/pile/{pile}/list/').format(
-                deck_id = self.deck_id,
-                pile = self.name
-                )
+            f'https://deckofcardsapi.com/api/deck/{self.deck_id}/pile/{self.name}/list/'
             )
-        cards = r.json()['piles'][('{0}').format(self.name)]['cards']
+        cards = r.json()['piles'][f'{self.name}']['cards']
         card_codes_list = [card['code'] for card in cards]
         return card_codes_list
 
     def draw_cards_from_top_of_pile(self, num_cards):
         r = requests.get(
-            ('https://deckofcardsapi.com/api/deck/{deck_id}/pile/{pile}/draw/?count={num_cards}').format(
-                deck_id = self.deck_id,
-                pile = self.name,
-                num_cards = str(num_cards)
-                )
+            f'https://deckofcardsapi.com/api/deck/{self.deck_id}/pile/{self.name}/draw/?count={num_cards}'
             )
+        self.remaining = r.json()['piles'][f'{self.name}']['remaining']
         cards = r.json()['cards']
         card_codes_list = [card['code'] for card in cards]
         card_codes_str = ",".join(card_codes_list)
         return card_codes_str
+    
+    def shuffle_pile(self):
+        requests.get(
+            f'https://deckofcardsapi.com/api/deck/{self.deck_id}/pile/{self.name}/shuffle'
+            )
 
 class PilePile(object):
     """This is the dict of CardPiles that can perform game operations"""
@@ -87,79 +77,38 @@ class PilePile(object):
         pile_dict = {}
         self.pile_dict = pile_dict
         self.deck_id = deck_id
-    
+
     def add_pile(self, card_pile):
         self.pile_dict[card_pile.name] = card_pile
-    
-    def get_draw_piles(self):
-        result_list = []
-        for pile in self.pile_dict.keys():
-            if re.search(r"draw", pile):
-                result_list.append(self.pile_dict.get(pile))
-        return result_list
-    
-    def get_win_piles(self):
-        result_list = []
-        for pile in self.pile_dict.keys():
-            if re.search(r"win", pile):
-                result_list.append(self.pile_dict.get(pile))
-        return result_list
     
     def get_pile(self, pile_name):
         return self.pile_dict.get(pile_name)
     
-    def pile_to_pile_transfer(self, pile1_name, pile2_name):
-        pass
+    def pile_to_pile_transfer(self, from_pile_name, to_pile_name):
+        # gets all cards from_pile and puts them into codes string for proper insertion
+        from_pile = self.get_pile(from_pile_name)
+        cards_to_transfer = from_pile.draw_cards_from_top_of_pile(from_pile.remaining)
+        try:
+            to_pile = self.get_pile(to_pile_name)
+            to_pile.add_to_pile(cards_to_transfer)
+        except:
+            self.add_pile(CardPile(self.deck_id, to_pile_name, cards_to_transfer))
 
-'''
-def add_cards_to_player_draw_pile(deck, player, cards):
-    # creates a card for a player from a deck and a player name string
-    # draw proper number of cards from the deck for one player
-    # the player's pile gets named 'player_pile' depending on the name given
-    r = requests.get(
-            ('https://deckofcardsapi.com/api/deck/{deck_id}/draw/?count={cards}').format(
-                deck_id = deck.deck_id,
-                cards = str(cards)
-                )
-            )
-    deck.remaining = deck.remaining - cards
-    r_dict = r.json()
-    player_cards = r_dict['cards']
-    # takes dict card list and formats it to be added to pile
-    player_card_codes_list = []
-    for i in range(len(player_cards)):
-        player_card_codes_list.append(player_cards[i]['code'])
-    player_card_codes = ","
-    player_card_codes = player_card_codes.join(player_card_codes_list)
-    # put those cards into player's pile, API named 'player_pile'
-    requests.get(
-            ('https://deckofcardsapi.com/api/deck/{deck_id}/pile/{pile}/add/?cards={player_card_codes}').format(
-                deck_id = deck.deck_id,
-                pile = ('{player}_pile').format(player = player),
-                player_card_codes = player_card_codes
-                )
-            )
-'''
 
-def get_p_draw_card(deck, player):
-    r = requests.get(
-            ('https://deckofcardsapi.com/api/deck/{deck_id}/pile/{pile}/draw/?count=1').format(
-                deck_id = deck.deck_id,
-                pile = ('{player}_draw').format(player = player)
-                )
-            )
-    r_dict = r.json()
-    player_cards = r_dict['cards']
-    player_card_code = player_cards[0]['code']
-    return player_card_code
-
-def compare_cards(cards_list, player_list):
-    # compares all the players' cards and returns
-    # a list of players who have max card val
+def take_a_turn(player_list, pile_pile):
+    """Takes in a Pilepile and player_list and performs all necessary functions to take a turn"""
+    print(f"Turn starting player list: {player_list}") 
+    # draw cards from all player_piles to compare
+    cards_to_compare = []
+    for player in player_list:
+        player_pile = pile_pile.get_pile(f'{player}_draw')
+        card = player_pile.draw_cards_from_top_of_pile(1)
+        cards_to_compare.append(card)
+    # compares all the players' cards
     max_card_val = 0
     ind_list = []
-    for i in range(len(cards_list)):
-        card_str = cards_list[i][:-1]
+    for i in range(len(cards_to_compare)):
+        card_str = cards_to_compare[i][:-1]
         card_dict = {'A': 14, 'K': 13, 'Q': 12, 'J': 11, '0': 10}
         if card_str in card_dict:
             card_val = card_dict[card_str]
@@ -170,246 +119,114 @@ def compare_cards(cards_list, player_list):
             ind_list = [i]
         elif card_val == max_card_val:
             ind_list.append(i)
-    result = [player_list[i] for i in ind_list]
-    return result
-
-# called
-def draw_cards_from_all_p_and_compare(pile_dict):
-    """ Takes in the pile_dict, draws a card from each card and compares them
-        to determine the highest value card. Returns a dict that contains a list of players
-        with the highest card values, as well as the pot of cards they won
-    """
-    # Let's make another pile in the pile_dict called card_pot and then make
-    # a transfer_from_one_pile_to_another func for CardPiles
-    cards_to_compare = []
-    for player in player_list:
-        cards_to_compare.append(get_p_draw_card(deck, player))
-    max_value_player_list = compare_cards(cards_to_compare, player_list)
-    result_dict = {
-        "max_value_player_list": max_value_player_list,
-        "card_pot": cards_to_compare
-    }
-    return result_dict
-
-def draw_all_cards_from_p_win_pile(deck, player, win_pile_count):
-    # gets all remaining cards and puts them into codes string for proper insertion
-    r = requests.get(
-            ('https://deckofcardsapi.com/api/deck/{deck_id}/pile/{pile}/draw/?count={all_cards}').format(
-                deck_id = deck.deck_id,
-                pile = ('{player}_win_pile').format(player = player),
-                all_cards = int(win_pile_count)
-                )
-            )
-    r_dict = r.json()
-    player_cards = r_dict['cards']
-    # takes dict card list and formats it to be added to pile
-    player_card_codes_list = []
-    for i in range(len(player_cards)):
-        player_card_codes_list.append(player_cards[i]['code'])
-    player_card_codes = ","
-    player_card_codes = player_card_codes.join(player_card_codes_list)
-    return player_card_codes
-
-def transfer_cards_from_p_win_to_p_pile(deck, player, win_pile_count):
-    # Take every card in player_win_pile and put it into player_pile
-    cards_to_transfer = draw_all_cards_from_p_win_pile(deck, player, win_pile_count)
-    # put those cards into player_pile
-    requests.get(
-            ('https://deckofcardsapi.com/api/deck/{deck_id}/pile/{pile}/add/?cards={player_card_codes}').format(
-                deck_id = deck.deck_id,
-                pile = ('{player}_pile').format(player = player),
-                player_card_codes = cards_to_transfer
-                )
-            )
-    # then reshuffle player_pile
-    requests.get(
-            ('https://deckofcardsapi.com/api/deck/{deck_id}/pile/{pile}/shuffle/').format(
-                deck_id = deck.deck_id,
-                pile = ('{player}_pile').format(player = player)
-                )
-            )
-
-# called
-def war_cleanup_function(deck, player_list):
-    # war cleanup func repopulates proper piles for players still in the game
-    # also returns list of players to remove
-    # uses draw and transfer funcs to accomplish cleanup
-    players_to_remove = []
-    r = requests.get(
-            ('https://deckofcardsapi.com/api/deck/{deck_id}/pile/{pile}/list/').format(
-                deck_id = game_deck.deck_id,
-                pile = ('{player}_pile').format(player = player_list[0])
-                )
-            )
-    r_dict = r.json()
-    piles = r_dict['piles']
-    for player in player_list:
-        remaining = piles[('{player}_pile').format(player = player)]['remaining']
-        print(('Remaining for {0}: {1}').format(player, remaining))
-        try:
-            win_pile_count = piles[('{player}_win_pile').format(player = player)]['remaining']
-        except:
-            win_pile_count = 0
-        if remaining + win_pile_count < 2:
-            print(("{player} does not have enough cards left! {player} is out of the game.").format(player = player))
-            if win_pile_count > 0:
-                transfer_cards_from_p_win_to_p_pile(game_deck, player, win_pile_count)
-            players_to_remove.append(player)
-        elif remaining < 2:
-            transfer_cards_from_p_win_to_p_pile(game_deck, player, win_pile_count)
-            print(("Cards transfered for {0}").format(player))
-    return players_to_remove
-
-def alter_player_list(players_to_remove):
-    for player in players_to_remove:
-        player_list.remove(player)
-
-# called
-def recursive_get_final_winner_and_pot(deck, result_dict):
-    """ Takes in the result_dict from draw_cards_from_all_p_and_compare and continues to
-        call the function until there's one winner in the max_value_player_list and
-        the card pot is a cumulative of all the winnings
-    """
-    max_value_player_list = result_dict["max_value_player_list"]
-    card_pot = result_dict["card_pot"]
-
+    max_value_player_list = [player_list[i] for i in ind_list]
+    # put cards into card_pot
+    try:
+        card_pot = pile_pile.get_pile('card_pot')
+        card_pot.add_to_pile(",".join(cards_to_compare))
+    except:
+        card_pot = CardPile(pile_pile.deck_id, 'card_pot', ",".join(cards_to_compare))
+        pile_pile.add_pile(card_pot)
+    # handle War scenario
     if len(max_value_player_list) > 1:
         if len(max_value_player_list) == 2:
             winners = " and ".join(max_value_player_list)
         else:
             winners = ", ".join(max_value_player_list)
-        print(("There's a {tie_len}-way tie between {winners}!").format(
-            tie_len = len(max_value_player_list),
-            winners = winners
-            )
-        )
+        print(f"There's a {len(max_value_player_list)}-way tie between {winners}!")
         print("This means War!")
 
-        players_to_remove = war_cleanup_function(deck, max_value_player_list)
+        # clean up piles and remove appropriate players for War
+        players_to_remove = []
+        for player in max_value_player_list:
+            player_draw_pile = pile_pile.get_pile(f'{player}_draw')
+            print(f'Remaining for {player}: {player_draw_pile.remaining}')
+            try:
+                player_win_pile = pile_pile.get_pile(f'{player}_win')
+                win_pile_count = player_win_pile.remaining
+            except:
+                win_pile_count = 0
+            if win_pile_count + player_draw_pile.remaining < 2:
+                print(f"{player} does not have enough cards left! {player} is out of the game.")
+                # all player cards need to go into card_pot so make sure they're all in draw pile
+                if win_pile_count > 0:
+                    pile_pile.pile_to_pile_transfer(f'{player}_win', f'{player}_draw')
+                players_to_remove.append(player)
+            elif player_draw_pile.remaining < 2:
+                pile_pile.pile_to_pile_transfer(f'{player}_win', f'{player}_draw')
+                print(f"Cards transferred for {player}")
         if len(players_to_remove) > 0:
+            if len(players_to_remove) == len(max_value_player_list):
+                print('Whoops, looks like War isn\'t gonna happen.')
+                print('Since it\'s way too much work to create a real solution, first player wins.')
+                players_to_remove = players_to_remove[1:]
             for player in players_to_remove:
-                card = get_p_draw_card(deck, player)
-                result_dict["card_pot"] += card
-                result_dict["max_value_player_list"].remove(player)
-        alter_player_list(players_to_remove)
+                pile_pile.pile_to_pile_transfer(f'{player}_draw', 'card_pot')
+                max_value_player_list.remove(player)
 
         if len(max_value_player_list) > 1:
-            for player in max_value_player_list:
-                card_pot += get_p_draw_card(deck, player)
-            new_result_dict = draw_cards_from_all_p_and_compare(deck, max_value_player_list)
-            new_result_dict["card_pot"] += card_pot
-        else:
-            return result_dict
+            take_a_turn(max_value_player_list, pile_pile)
+    # give cards to turn winner
+    winner = max_value_player_list[0]
+    pile_pile.pile_to_pile_transfer('card_pot', f'{winner}_win')
+    print(f"{winner} won all of the cards!")
 
-        if len(new_result_dict["max_value_player_list"]) > 1:
-            return recursive_get_final_winner_and_pot(deck, new_result_dict)
-        else:
-            return new_result_dict
-    else:
-        return result_dict
-
-# called
-def cards_to_player_win_pile(deck, winner, cards_won):
-    # takes dict card list and formats it to be added to pile as string
-    cards_won_codes = ","
-    cards_won_codes = cards_won_codes.join(cards_won)
-    # adding formatted cards to player_win_pile
-    requests.get(
-            ('https://deckofcardsapi.com/api/deck/{deck_id}/pile/{pile}/add/?cards={player_card_codes}').format(
-                deck_id = deck.deck_id,
-                pile = ('{player}_win_pile').format(player = winner),
-                player_card_codes = cards_won_codes
-                )
-            )
-
-def eot_cleanup_function(deck, player_list):
-    # end of turn func repopulates proper piles for players still in the game
-    # also returns list of players to remove
-    # uses draw and transfer funcs to accomplish cleanup
-    players_to_remove = []
-    # check if any player's player_pile is 0
-    r = requests.get(
-            ('https://deckofcardsapi.com/api/deck/{deck_id}/pile/{pile}/list/').format(
-                deck_id = game_deck.deck_id,
-                pile = ('{player}_pile').format(player = player_list[0])
-                )
-            )
-    r_dict = r.json()
-    piles = r_dict['piles']
-    for player in player_list:
-        remaining = piles[('{player}_pile').format(player = player)]['remaining']
-        print(('Remaining for {0}: {1}').format(player, remaining))
-        # if it's empty, transfer to player_pile
-        if remaining == 0:
-            try:
-                win_pile_count = piles[('{player}_win_pile').format(player = player)]['remaining']
-                if win_pile_count == 0:
-                    print(("{player} has no cards left! {player} is out of the game.").format(player = player))
-                    players_to_remove.append(player)
-                else:
-                    transfer_cards_from_p_win_to_p_pile(game_deck, player, win_pile_count)
-                    print(("Cards transfered for {0}").format(player))
-            except:
-                print(("{player} has no cards left! {player} is out of the game.").format(player = player))
-                players_to_remove.append(player)
-    return players_to_remove
-
-# calls all of the above labeled functions
-def take_a_turn(game_deck, player_list):
-    print(("Turn starting player list: {0}").format(player_list))
-
-    d = draw_cards_from_all_p_and_compare(game_deck, player_list)
-
-    final = recursive_get_final_winner_and_pot(game_deck, d)
-
-    winner = final["max_value_player_list"][0]
-    card_pot = final["card_pot"]
-
-    cards_to_player_win_pile(game_deck, winner, card_pot)
-    print(("{winner} won all of the cards!").format(winner = winner))
-
-    players_to_remove = eot_cleanup_function(game_deck, player_list)
-    if len(players_to_remove) > 0:
-        alter_player_list(players_to_remove)
-
-
-def init_game(deck, player_list):
-    # deals out all the cards in the deck to player's draw piles
+def main():
+    # initiate the game, dealing out all cards
+    game_deck = Deck()
+    ## handle test cases for inputs
+    player_count = int(input('How many players would you like to play with? \n> '))
+    player_list = []
+    for i in range(player_count):
+        new_player = input(f'What is the name of player {i + 1}? \n> ')
+        player_list.append(new_player)
+    turn_limit = int(input('How many turns before you give up? \n> '))
     initial_deal_card_num = int(52 / len(player_list))
     extra_cards_to_deal = 52 % len(player_list)
-    pile_dict = {}
+    pile_pile = PilePile(game_deck.deck_id)
     for player in player_list:
         extra_cards = 0
         if extra_cards_to_deal > 0:
             extra_cards = 1
             extra_cards_to_deal -= 1
-        pile_name = ('{player}_draw').format(player = player)
-        cards_to_add = deck.draw_from_deck(initial_deal_card_num + extra_cards)
-        pile_dict[pile_name] = CardPile(deck.deck_id, pile_name, cards_to_add)
+        pile_name = f'{player}_draw'
+        cards_to_add = game_deck.draw_from_deck(initial_deal_card_num + extra_cards)
+        pile_pile.add_pile(CardPile(game_deck.deck_id, pile_name, cards_to_add))
     print('++++Game successfully initiated++++')
-    return pile_dict
-
-def main():
-    game_deck = Deck()
-    player_list = ['jenna', 'eddie', 'cp1', 'cp2', 'cp3', 'cp4']
-    pile_dict = init_game(game_deck, player_list)
-    # create a dict called game_data, then feed it into functions with ** and it will unpack itself
-
-    count = 1
-    while len(player_list) > 1:
-        r = requests.get(
-                ('https://deckofcardsapi.com/api/deck/{deck_id}/pile/{pile}/list/').format(
-                    deck_id = game_deck.deck_id,
-                    pile = ('{player}_win_pile').format(player = 'jenna')
-                    )
-                )
-        take_a_turn(game_deck, player_list)
-        print('Turn completed: ' + str(count))
-        count += 1
+    # continue to take turns until only one player is left
+    turn_count = 1
+    while turn_count <= turn_limit:
+        # clean up piles and remove appropriate players
+        players_to_remove = []
+        for player in player_list:
+            player_draw_pile = pile_pile.get_pile(f'{player}_draw')
+            print(f'Remaining for {player}: {player_draw_pile.remaining}')
+            if player_draw_pile.remaining == 0:
+                try:
+                    player_win_pile = pile_pile.get_pile(f'{player}_win')
+                    win_pile_count = player_win_pile.remaining
+                except:
+                    win_pile_count = 0
+                if win_pile_count == 0:
+                    print(f"{player} has no cards left! {player} is out of the game.")
+                    players_to_remove.append(player)
+                else:
+                    pile_pile.pile_to_pile_transfer(f'{player}_win', f'{player}_draw')
+                    player_draw_pile.shuffle_pile()
+                    print(f"Cards transferred for {player}")
+        if len(players_to_remove) > 0:
+            for player in players_to_remove:
+                player_list.remove(player)
+                
+        if len(player_list) < 2:
+            print(f"Congrats {player_list[0]}! You've won the game!")
+            break
+        else:  
+            take_a_turn(player_list, pile_pile)
+            print(f'Turn completed: {str(turn_count)}')
+            turn_count += 1
     else:
-        print(("Congrats {player}! You've won the game!").format(player = player_list[0]))
-
-    # print(r.text)
+        print('Out of turns, Game Over')
 
 if __name__ == "__main__":
     main()

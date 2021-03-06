@@ -1533,16 +1533,17 @@ def test_PilePile_class():
     deck = game.Deck()
     player_list = ['jenna', 'eddie', 'cp1', 'cp2', 'cp3']
     pile_pile = game.PilePile(deck.deck_id)
-
     for player in player_list:
-        pile_pile.add_pile(game.CardPile(deck.deck_id, ('{0}_draw').format(player), deck.draw_from_deck(4)))
+        pile_pile.add_pile(game.CardPile(deck.deck_id, f'{player}_draw', deck.draw_from_deck(4)))
     
     for player in player_list:
-        assert pile_pile.get_pile(('{0}_draw').format(player)).name == ('{0}_draw').format(player)
+        assert pile_pile.get_pile(f'{player}_draw').name == f'{player}_draw'
         
     assert len(pile_pile.get_draw_piles()) == len(player_list)
 
 
+
+"""
 def test_init_game_func():
     deck = game.Deck()
     player_list = ['jenna', 'eddie', 'cp1', 'cp2', 'cp3', 'cp4']
@@ -1556,9 +1557,10 @@ def test_init_game_func():
         assert player_pile.remaining in (8, 9)
         total_card_num += player_pile.remaining
     assert total_card_num == 52
+"""
 
 
-
+# finish building tests for PilePile
 
 # Cleanup things to do:
     # Change all .format to f-strings
@@ -1566,6 +1568,7 @@ def test_init_game_func():
     # document all functions
     # packing and unpacking lists
     # use list comprehensions
+    # research how to use for-loops properly
 
 
 
